@@ -1,0 +1,108 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Deteksi Angka 3 dan 5</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background: #f0f4f8;
+    }
+
+    button {
+      padding: 12px 20px;
+      cursor: pointer;
+    }
+
+    #kamera {
+      margin: 20px auto;
+    }
+
+    #hasil {
+      font-size: 24px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Deteksi Angka 3 dan 5</h1>
+  <p>Tunjukkan angka yang sudah dipelajari model ke webcam.</p>
+
+  <button id="tombol" onclick="mulai()">Mulai Kamera</button>
+
+  <div id="kamera"></div>
+  <p id="status">Klik tombol untuk memulai.</p>
+  <div id="hasil"></div>
+
+  <script>
+    const URL_MODEL = "./model/";
+
+    let model;
+    let webcam;
+    let berjalan = false;
+
+    async function mulai() {
+      const tombol = document.getElementById("tombol");
+      const status = document.getElementById("status");
+
+      tombol.disabled = true;
+      status.textContent = "Memuat model...";
+
+      try {
+        model = await tmImage.load(
+          URL_MODEL + "model.json",
+          URL_MODEL + "metadata.json"
+        );
+
+        webcam = new tmImage.Webcam(320, 320, true);
+        await webcam.setup();
+        await webcam.play();
+
+        document.getElementById("kamera").appendChild(
+          webcam.canvas
+        );
+
+        berjalan = true;
+        tombol.textContent = "Kamera Aktif";
+        status.textContent = "Arahkan angka ke kamera.";
+
+        prediksi();
+      } catch (error) {
+        console.error(error);
+        status.textContent =
+          "Gagal memulai. Periksa file model, koneksi internet, dan izin kamera.";
+        tombol.disabled = false;
+      }
+    }
+
+    async function prediksi() {
+      if (!berjalan) return;
+
+      webcam.update();
+
+      const hasilModel = await model.predict(webcam.canvas);
+      hasilModel.sort(
+        (a, b) => b.probability - a.probability
+      );
+
+      const terbaik = hasilModel[0];
+
+      document.getElementById("hasil").textContent =
+        "Prediksi: " + terbaik.className +
+        " (" + (terbaik.probability * 100).toFixed(1) + "%)";
+
+      requestAnimationFrame(prediksi);
+    }
+  </script>
+
+</body>
+</html>
